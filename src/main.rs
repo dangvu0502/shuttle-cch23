@@ -1,110 +1,42 @@
 use axum::{
-    extract,
+    extract::{self, Query},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
     Router,
 };
 
-#[derive(serde::Deserialize, Debug)]
-struct Reindeer {
-    name: String,
-    strength: u32,
-    speed: Option<f64>,
-    height: Option<u32>,
-    antler_width: Option<u32>,
-    snow_magic_power: Option<u32>,
-    favorite_food: Option<String>,
-    #[serde(rename = "cAnD13s_3ATeN-yesT3rdAy")]
-    candies_eaten_yesterday: Option<u32>,
+#[derive(serde::Deserialize)]
+struct Pagination {
+    offset: Option<usize>,
+    limit: Option<usize>,
+    split: Option<usize>,
 }
 
-async fn strength(extract::Json(payload): extract::Json<Vec<Reindeer>>) -> impl IntoResponse {
-    let total_strength: u32 = payload.iter().map(|r| r.strength).sum();
-    (StatusCode::OK, total_strength.to_string()).into_response()
-}
+async fn names(
+    pagination: Query<Pagination>,
+    extract::Json(payload): extract::Json<Vec<String>>,
+) -> impl IntoResponse {
+    let payload_len = payload.len();
 
-#[derive(serde::Serialize)]
-struct ContestResults {
-    fastest: String,
-    tallest: String,
-    magician: String,
-    consumer: String,
-}
+    let offset = pagination.offset.unwrap_or(0).min(payload_len);
+    let limit = pagination
+        .limit
+        .unwrap_or(payload_len - offset)
+        .min(payload_len - offset);
+    let split = pagination.split.unwrap_or(0);
 
-async fn contest(extract::Json(payload): extract::Json<Vec<Reindeer>>) -> impl IntoResponse {
-    let mut fastest: Option<(f64, &Reindeer)> = None;
-    let mut tallest: Option<(u32, &Reindeer)> = None;
-    let mut magician: Option<(u32, &Reindeer)> = None;
-    let mut consumer: Option<(u32, &Reindeer)> = None;
-
-    for reindeer in &payload {
-        if let Some(speed) = reindeer.speed {
-            if fastest.is_none() || speed > fastest.unwrap().0 {
-                fastest = Some((speed, reindeer));
-            }
-        }
-
-        if let Some(height) = reindeer.height {
-            if tallest.is_none() || height > tallest.unwrap().0 {
-                tallest = Some((height, reindeer));
-            }
-        }
-
-        if let Some(snow_magic_power) = reindeer.snow_magic_power {
-            if magician.is_none() || snow_magic_power > magician.unwrap().0 {
-                magician = Some((snow_magic_power, reindeer));
-            }
-        }
-
-        if let Some(candies_eaten_yesterday) = reindeer.candies_eaten_yesterday {
-            if consumer.is_none() || candies_eaten_yesterday > consumer.unwrap().0 {
-                consumer = Some((candies_eaten_yesterday, reindeer));
-            }
-        }
+    let result: Vec<String> = payload.into_iter().skip(offset).take(limit).collect();
+    if split == 0 {
+        return extract::Json(result).into_response();
     }
 
-    let result: ContestResults = ContestResults {
-        fastest: fastest
-            .map(|(_, r)| {
-                format!(
-                    "Speeding past the finish line with a strength of {} is {}",
-                    r.strength, r.name
-                )
-            })
-            .unwrap_or_else(|| "No reindeer with valid speed found.".to_string()),
-        tallest: tallest
-            .map(|(_, r)| {
-                format!(
-                    "{} is standing tall with his {} cm wide antlers",
-                    r.name,
-                    r.antler_width.unwrap_or(0)
-                )
-            })
-            .unwrap_or_else(|| "No reindeer with valid height found.".to_string()),
-        magician: magician
-            .map(|(_, r)| {
-                format!(
-                    "{} could blast you away with a snow magic power of {}",
-                    r.name,
-                    r.snow_magic_power.unwrap_or(0)
-                )
-            })
-            .unwrap_or_else(|| "No reindeer with valid snow magic power found.".to_string()),
-        consumer: consumer
-            .map(|(_, r)| {
-                format!(
-                    "{} ate lots of candies, but also some {}",
-                    r.name,
-                    r.favorite_food
-                        .clone()
-                        .unwrap_or_else(|| "unknown food".to_string())
-                )
-            })
-            .unwrap_or_else(|| "No reindeer with valid candy consumption found.".to_string()),
-    };
+    let chunks: Vec<Vec<String>> = result
+        .chunks(split)
+        .map(|chunk| chunk.to_vec()) // Convert each chunk to a Vec<String>
+        .collect();
 
-    extract::Json(result)
+    extract::Json(chunks).into_response()
 }
 
 async fn server_error() -> impl IntoResponse {
@@ -113,11 +45,9 @@ async fn server_error() -> impl IntoResponse {
 
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
-    let nest_router = Router::new()
-        .route("/strength", post(strength))
-        .route("/contest", post(contest));
+    let nest_router = Router::new().route("/", post(names));
 
-    let router = Router::new().nest("/4", nest_router).fallback(server_error);
+    let router = Router::new().nest("/5", nest_router).fallback(server_error);
 
     Ok(router.into())
 }
