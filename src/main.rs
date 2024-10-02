@@ -6,37 +6,36 @@ use axum::{
     Router,
 };
 
-#[derive(serde::Deserialize)]
-struct Pagination {
-    offset: Option<usize>,
-    limit: Option<usize>,
-    split: Option<usize>,
+#[derive(serde::Serialize)]
+struct Elf {
+    elf: usize,
+    #[serde(rename = "elf on a shelf")]
+    elf_on_a_shelf: usize,
+    #[serde(rename = "shelf with no elf on it")]
+    shelf_with_no_elf_on_it: usize,
 }
 
-async fn names(
-    pagination: Query<Pagination>,
-    extract::Json(payload): extract::Json<Vec<String>>,
-) -> impl IntoResponse {
-    let payload_len = payload.len();
+async fn count(payload: String) -> impl IntoResponse {
+    const SHELF: &str = "shelf";
+    const ELF_ON_A_SHELF: &str = "elf on a ";
 
-    let offset = pagination.offset.unwrap_or(0).min(payload_len);
-    let limit = pagination
-        .limit
-        .unwrap_or(payload_len - offset)
-        .min(payload_len - offset);
-    let split = pagination.split.unwrap_or(0);
-
-    let result: Vec<String> = payload.into_iter().skip(offset).take(limit).collect();
-    if split == 0 {
-        return extract::Json(result).into_response();
+    let (mut elf_on_a_shelf, mut shelf_with_no_elf_on_it) = (0, 0);
+    
+    for i in 0..=payload.len() - SHELF.len() {
+        if &payload[i..i + SHELF.len()] == SHELF {
+            if i >= ELF_ON_A_SHELF.len() && &payload[(i-ELF_ON_A_SHELF.len())..i] == ELF_ON_A_SHELF {
+                elf_on_a_shelf += 1;
+            } else {
+                shelf_with_no_elf_on_it += 1;
+            }
+        }
     }
 
-    let chunks: Vec<Vec<String>> = result
-        .chunks(split)
-        .map(|chunk| chunk.to_vec()) // Convert each chunk to a Vec<String>
-        .collect();
-
-    extract::Json(chunks).into_response()
+    extract::Json(Elf {
+        elf: payload.matches("elf").count(),
+        elf_on_a_shelf,
+        shelf_with_no_elf_on_it,
+    })
 }
 
 async fn server_error() -> impl IntoResponse {
@@ -45,9 +44,9 @@ async fn server_error() -> impl IntoResponse {
 
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
-    let nest_router = Router::new().route("/", post(names));
+    let nest_router = Router::new().route("/", post(count));
 
-    let router = Router::new().nest("/5", nest_router).fallback(server_error);
+    let router = Router::new().nest("/6", nest_router).fallback(server_error);
 
     Ok(router.into())
 }
