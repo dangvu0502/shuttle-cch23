@@ -16,3 +16,24 @@ pub fn routes() -> Router {
         .nest("/5", day_05::route())
         .nest("/6", day_06::route())
 }
+
+#[cfg(test)]
+pub(crate) async fn routes_test() -> axum_test::TestServer {
+    // let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+    // sqlx::migrate!().run(&pool).await.unwrap();
+    // Force to init the tracing subscriber, first test call will succeed, rest will error out
+
+    use axum_test::Transport;
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .try_init();
+    let app = routes().layer(tower_http::trace::TraceLayer::new_for_http());
+    let config = axum_test::TestServerConfig {
+        save_cookies: true,
+        expect_success_by_default: true,
+        transport: Some(Transport::MockHttp),
+        ..Default::default()
+    };
+
+    axum_test::TestServer::new_with_config(app, config).unwrap()
+}
