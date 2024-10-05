@@ -4,16 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.7.4"
+axum = { version = "0.7.4", features = ["multipart"] }
 axum-extra = { version = "0.9.4", features = ["cookie"] }
 axum-test = "16.1.0"
 base64 = "0.22.1"
+image = "0.25.2"
 reqwest = { version = "0.12.8", features = ["json"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 shuttle-axum = "0.48.0"
 shuttle-runtime = "0.48.0"
 tokio = "1.28.2"
-tower-http = { version = "0.6.1", features = ["trace"] }
+tower-http = { version = "0.6.1", features = ["fs", "trace"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
