@@ -8,6 +8,7 @@ axum = "0.7.4"
 axum-extra = { version = "0.9.4", features = ["cookie"] }
 axum-test = "16.1.0"
 base64 = "0.22.1"
+reqwest = { version = "0.12.8", features = ["json"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 shuttle-axum = "0.48.0"
