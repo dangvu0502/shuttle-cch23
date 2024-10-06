@@ -11,7 +11,7 @@ mod day_08;
 mod day_09;
 mod day_10;
 mod day_11;
-
+mod day_12;
 
 pub fn routes() -> Router {
     Router::new()
@@ -26,6 +26,7 @@ pub fn routes() -> Router {
         .nest("/9", day_09::route())
         .nest("/10", day_10::route())
         .nest("/11", day_11::route())
+        .nest("/12", day_12::route())
 
 }
 
