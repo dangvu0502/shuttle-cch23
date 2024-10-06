@@ -1,10 +1,9 @@
 use axum::{
-    extract::{self, Path},
-    http::response,
+    extract::Path,
     routing::get,
     Json, Router,
 };
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
 pub(super) fn route() -> Router {
     Router::new()
