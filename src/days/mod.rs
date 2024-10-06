@@ -1,4 +1,5 @@
 use axum::Router;
+use sqlx::SqlitePool;
 
 mod day_01;
 mod day_02;
@@ -12,8 +13,9 @@ mod day_09;
 mod day_10;
 mod day_11;
 mod day_12;
+mod day_13;
 
-pub fn routes() -> Router {
+pub fn routes(pool: SqlitePool) -> Router {
     Router::new()
         .nest("/1", day_01::route())
         .nest("/2", day_02::route())
@@ -27,20 +29,18 @@ pub fn routes() -> Router {
         .nest("/10", day_10::route())
         .nest("/11", day_11::route())
         .nest("/12", day_12::route())
-
+        .nest("/13", day_13::route(pool.clone()))
 }
 
 #[cfg(test)]
 pub(crate) async fn routes_test() -> axum_test::TestServer {
-    // let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
-    // sqlx::migrate!().run(&pool).await.unwrap();
-    // Force to init the tracing subscriber, first test call will succeed, rest will error out
-
+    let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!().run(&pool).await.unwrap();
     use axum_test::Transport;
     let _ = tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .try_init();
-    let app = routes().layer(tower_http::trace::TraceLayer::new_for_http());
+    let app = routes(pool).layer(tower_http::trace::TraceLayer::new_for_http());
     let config = axum_test::TestServerConfig {
         save_cookies: true,
         expect_success_by_default: true,
