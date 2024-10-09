@@ -37,10 +37,12 @@ struct Task1Response {
     result: Result,
 }
 
-fn extract(mut payload: serde_json::Value) -> Option<String> {
-    payload.as_object_mut()?.remove("input")?.to_string().into()
+fn extract(payload: serde_json::Value) -> Option<String> {
+    if let Some(input) = payload.get("input") {
+        return input.as_str().map(|s| s.to_string());
+    }
+    None
 }
-
 async fn nice(Json(payload): Json<serde_json::Value>) -> (StatusCode, Json<Task1Response>) {
     const FORBIDDEN: &[&str] = &["ab", "cd", "pq", "xy"];
     const VOWELS: &[char] = &['a', 'e', 'i', 'o', 'u', 'y'];
